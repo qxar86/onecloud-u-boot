@@ -34,8 +34,7 @@ docker run -v `pwd`/onecloud-u-boot:/uboot -it soulteary/onecloud-uboot:builder-
 Pack
 
 ```bash
-docker run -v `pwd`/onecloud-u-boot:/uboot -it soulteary/onecloud-uboot:packer-2025.01.06 pack-res-img.sh
-docker run -v `pwd`/onecloud-u-boot:/uboot -it soulteary/onecloud-uboot:packer-2025.01.06 pack-burn-img.sh
+docker run -v `pwd`/onecloud-u-boot:/uboot -it soulteary/onecloud-uboot:packer-2025.01.06
 ```
 
 Release files
