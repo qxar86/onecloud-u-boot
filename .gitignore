@@ -6,6 +6,11 @@
 # Normal rules
 #
 
+pack
+build
+resource/*.bmp
+!resource/bootup.example.bmp
+
 *.rej
 *.orig
 *.a
