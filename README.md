@@ -38,6 +38,28 @@ docker run -v `pwd`/onecloud-u-boot:/uboot -it soulteary/onecloud-uboot:packer-2
 docker run -v `pwd`/onecloud-u-boot:/uboot -it soulteary/onecloud-uboot:packer-2025.01.06 pack-burn-img.sh
 ```
 
+Release files
+
+```bash
+ls -al onecloud-u-boot/build/eMMC.burn.img 
+-rw-r--r-- 1 root root 1367492 Jan  6 10:24 onecloud-u-boot/build/eMMC.burn.img
+
+
+ls -al onecloud-u-boot/pack 
+total 1364
+drwxr-xr-x  2 root      root        4096 Jan  6 10:24 .
+drwxrwxr-x 26 soulteary soulteary   4096 Jan  6 10:24 ..
+-rw-r--r--  1 root      root         190 Jan  6 10:24 aml_sdc_burn.ini
+-rw-r--r--  1 root      root      346003 Jan  6 10:24 bootloader.img
+-rw-r--r--  1 root      root          48 Jan  6 10:24 bootloader.VERIFY
+-rw-r--r--  1 root      root         444 Jan  6 10:24 commands.txt
+-rwxr-xr-x  1 root      root       11784 Jan  6 10:24 DDR.USB
+-rw-r--r--  1 root      root         116 Jan  6 10:24 platform.conf
+-rw-r--r--  1 root      root      691392 Jan  6 10:24 resource.img
+-rw-r--r--  1 root      root          48 Jan  6 10:24 resource.VERIFY
+-rw-r--r--  1 root      root      313235 Jan  6 10:24 UBOOT_COMP.USB
+```
+
 ----
 
 # License
