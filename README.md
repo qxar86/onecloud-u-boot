@@ -28,7 +28,7 @@ docker build -t soulteary/onecloud-uboot:packer-2025.01.06 . -f Dockerfile.packe
 Build
 
 ```bash
-docker run -v `pwd`/onecloud-u-boot:/uboot -it soulteary/onecloud-uboot:builder-2025.01.06 build-img.sh
+docker run -v `pwd`/onecloud-u-boot:/uboot -it soulteary/onecloud-uboot:builder-2025.01.06
 ```
 
 Pack
