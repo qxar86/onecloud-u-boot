@@ -12,11 +12,12 @@ RUN sed -i 's#http://archive.ubuntu.com#http://mirrors.tuna.tsinghua.edu.cn#g' /
 
 # COPY gcc-linaro-arm-none-eabi-4.8-2014.04_linux.tar.xz ./
 
-COPY scripts/builder/build-img.sh /bin/
-RUN chmod +x /bin/build-img.sh
+COPY scripts/builder/build-image /bin/
+RUN chmod +x /bin/build-image
 
 RUN git config --global user.email "soulteary@gmail.com" && \
     git config --global user.name "soulteary" && \
     git config --global safe.directory '*'
 
 WORKDIR /uboot
+CMD ["build-image"]
