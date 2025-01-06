@@ -40,6 +40,9 @@ docker run -v `pwd`/onecloud-u-boot:/uboot -it soulteary/onecloud-uboot:packer-2
 
 ----
 
+# License
+
+```text
 #
 # (C) Copyright 2000 - 2009
 # Wolfgang Denk, DENX Software Engineering, wd@denx.de.
@@ -62,6 +65,7 @@ docker run -v `pwd`/onecloud-u-boot:/uboot -it soulteary/onecloud-uboot:packer-2
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston,
 # MA 02111-1307 USA
 #
+```
 
 Summary:
 ========
