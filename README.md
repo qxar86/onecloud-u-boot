@@ -1,3 +1,45 @@
+# OneCloud U-Boot
+
+Prepare code
+
+```bash
+mkdir onecloud-playground
+cd onecloud-playground 
+
+git clone https://github.com/soulteary/onecloud-u-boot.git
+```
+
+Get docker development environment
+
+```bash
+docker pull soulteary/onecloud-uboot:builder-2025.01.06
+docker pull soulteary/onecloud-uboot:packer-2025.01.06
+```
+
+(optional) OR Build your docker development environment
+
+```bash
+cd onecloud-u-boot/docker
+
+docker build --platform linux/386 -t soulteary/onecloud-uboot:builder-2025.01.06 . -f Dockerfile.builder
+docker build -t soulteary/onecloud-uboot:packer-2025.01.06 . -f Dockerfile.packer
+```
+
+Build
+
+```bash
+docker run -v `pwd`/onecloud-u-boot:/uboot -it soulteary/onecloud-uboot:builder-2025.01.06 build-img.sh
+```
+
+Pack
+
+```bash
+docker run -v `pwd`/onecloud-u-boot:/uboot -it soulteary/onecloud-uboot:packer-2025.01.06 pack-res-img.sh
+docker run -v `pwd`/onecloud-u-boot:/uboot -it soulteary/onecloud-uboot:packer-2025.01.06 pack-burn-img.sh
+```
+
+----
+
 #
 # (C) Copyright 2000 - 2009
 # Wolfgang Denk, DENX Software Engineering, wd@denx.de.
