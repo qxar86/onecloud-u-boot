@@ -1,75 +1,117 @@
-name: Build1
+name: Build U-Boot for OneCloud
 
 on:
   push:
+    branches: [ main, master, develop ]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  TOOLCHAIN_URL: "https://dl.tuling.pp.ua/uploads/gcc-linaro-arm-none-eabi-4.8-2014.04_linux.tgz"
+  TOOLCHAIN_DIR: "gcc-linaro-arm-none-eabi-4.8-2014.04_linux"
+  AMLIMG_VERSION: "v0.3.0"
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4  # 升级到v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install dependencies (including 32-bit libraries)
         run: |
-          sudo apt update
-          # 修正字体包名称，并添加-y标志以非交互方式安装
-          sudo apt install -y make imagemagick fonts-dejavu
+          sudo apt-get update
+          # 安装构建工具和字体
+          sudo apt-get install -y make imagemagick fonts-dejavu
+          # 关键修复：安装32位兼容库，解决libz.so.1缺失问题
+          sudo apt-get install -y lib32z1 lib32ncurses5 libc6-i386
+        env:
+          DEBIAN_FRONTEND: noninteractive
 
-      - name: Download toolchain
+      - name: Cache toolchain
+        uses: actions/cache@v4
+        id: toolchain-cache
+        with:
+          path: ${{ env.TOOLCHAIN_DIR }}
+          key: ${{ runner.os }}-toolchain-${{ hashFiles(env.TOOLCHAIN_DIR + '/bin/arm-none-eabi-gcc') }}
+          restore-keys: |
+            ${{ runner.os }}-toolchain-
+
+      - name: Download and extract toolchain
+        if: steps.toolchain-cache.outputs.cache-hit != 'true'
         run: |
-          curl -L -O https://dl.tuling.pp.ua/uploads/gcc-linaro-arm-none-eabi-4.8-2014.04_linux.tgz
-          tar xzf ./gcc-linaro-arm-none-eabi-4.8-2014.04_linux.tgz
+          curl -L -o toolchain.tgz "${{ env.TOOLCHAIN_URL }}"
+          tar xzf toolchain.tgz
+          rm toolchain.tgz
+        timeout-minutes: 5
 
-      - name: Build
+      - name: Set up toolchain PATH
         run: |
-          export PATH="$PATH:$(pwd)/gcc-linaro-arm-none-eabi-4.8-2014.04_linux/bin"
+          echo "Toolchain path: $(pwd)/${{ env.TOOLCHAIN_DIR }}/bin"
+          echo "$(pwd)/${{ env.TOOLCHAIN_DIR }}/bin" >> $GITHUB_PATH
 
+      - name: Verify toolchain installation
+        run: |
+          arm-none-eabi-gcc -v
+          file ${{ env.TOOLCHAIN_DIR }}/bin/arm-none-eabi-gcc
+
+      - name: Build U-Boot
+        run: |
           make distclean
           make m8b_onecloud_config
           make -j$(nproc)
+        env:
+          PATH: ${{ github.workspace }}/${{ env.TOOLCHAIN_DIR }}/bin:$PATH
 
-      - name: Download AmlImg
+      - name: Download AmlImg tool
         run: |
-          ver="v0.3.0"
-          curl -L -o ./AmlImg https://github.com/hzyitc/AmlImg/releases/download/$ver/AmlImg_${ver}_linux_amd64
+          curl -L -o ./AmlImg \
+            https://github.com/hzyitc/AmlImg/releases/download/${{ env.AMLIMG_VERSION }}/AmlImg_${{ env.AMLIMG_VERSION }}_linux_amd64
           chmod +x ./AmlImg
+        timeout-minutes: 3
 
-      - name: Generate resource
+      - name: Generate bootup image resource
         run: |
           mkdir -p resource
-
           convert \
             -size 640x360 \
             -background black \
             -gravity center -font "DejaVu-Sans" -pointsize 64 -fill white label:"U-Boot" \
             BMP3:resource/bootup.bmp
-
-          cat <<EOF >resource/list.txt
+          
+          cat <<EOF > resource/list.txt
           090000:bootup:bootup.bmp
           EOF
+          
           ./AmlImg res_pack build/resource.img resource/
 
-      - name: Generate eMMC burn image
+      - name: Generate eMMC burn image package
         run: |
           mkdir -p pack
-
+          
+          # Copy essential files
           cp build/ddr_init.bin pack/DDR.USB
           cp build/u-boot-comp.bin pack/UBOOT_COMP.USB
-
-          cat <<EOF >pack/aml_sdc_burn.ini
+          cp build/u-boot.bin pack/bootloader.img
+          cp build/resource.img pack/resource.img
+          
+          # Generate configuration files
+          cat <<EOF > pack/aml_sdc_burn.ini
           [common]
           erase_bootloader    = 1
           erase_flash         = 0
           reboot              = 0
-
-          ;package will filled by sdacard burning tool
+          
           [burn_ex]
           package     = aml_upgrade_package.img
-          ;media       =
           EOF
-
-          cat <<EOF >pack/platform.conf
+          
+          cat <<EOF > pack/platform.conf
           Platform:0x0801
           BinPara:0xd9010000
           DDRLoad:0xd9000000
@@ -77,56 +119,56 @@ jobs:
           Uboot_down:0x200000
           Uboot_decomp:0xd9000030
           EOF
-
-          cp build/u-boot.bin pack/bootloader.img
-          echo -n "sha1sum $(sha1sum pack/bootloader.img | awk '{print $1}')" >pack/bootloader.VERIFY
-
-          cp build/resource.img pack/resource.img
-          echo -n "sha1sum $(sha1sum pack/resource.img | awk '{print $1}')" >pack/resource.VERIFY
-
-          cat <<EOF >pack/commands.txt
+          
+          # Generate verification files
+          echo -n "sha1sum $(sha1sum pack/bootloader.img | awk '{print $1}')" > pack/bootloader.VERIFY
+          echo -n "sha1sum $(sha1sum pack/resource.img | awk '{print $1}')" > pack/resource.VERIFY
+          
+          # Generate commands list
+          cat <<EOF > pack/commands.txt
           USB:DDR:normal:DDR.USB
           USB:UBOOT_COMP:normal:UBOOT_COMP.USB
-
           ini:aml_sdc_burn:normal:aml_sdc_burn.ini
           conf:platform:normal:platform.conf
-
           PARTITION:bootloader:normal:bootloader.img
           VERIFY:bootloader:normal:bootloader.VERIFY
-
           PARTITION:resource:normal:resource.img
           VERIFY:resource:normal:resource.VERIFY
-
-          # PARTITION:boot:normal:boot.img
-          # VERIFY:boot:normal:boot.VERIFY
-          # PARTITION:rootfs:normal:rootfs.img
-          # VERIFY:rootfs:normal:rootfs.VERIFY
           EOF
-
+          
           ./AmlImg pack build/eMMC.burn.img pack/
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4  # 升级到v4
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: u-boot-build-artifacts  # 为Artifact指定一个名称
-          path: |  # 上传的文件路径
+          name: u-boot-artifacts
+          path: |
             build/*.bin
             build/resource.img
             build/eMMC.burn.img
-          # 如果希望覆盖同名Artifact，可添加 overwrite: true
+          overwrite: true
+          retention-days: 7
 
-      - name: Install hub
-        run: sudo apt install -y hub  # 确保hub命令行工具已安装
+      - name: Install hub for release creation
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        run: sudo apt-get install -y hub
 
-      - name: Release
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         run: |
           time="${{ github.event.head_commit.timestamp }}"
           sha="${GITHUB_SHA:0:8}"
           tag="build-$(date +'%Y%m%d-%H%M' -d "$time")"
-          message="Auto-Build $(date +'%Y-%m-%d %H:%M' -d "$time")"
-          hub release create -t "$GITHUB_SHA" "$tag" -m "$message" \
-            $(for a in build/*.bin; do echo -a $a; done) \
+          message="Auto-Build $(date +'%Y-%m-%d %H:%M' -d "$time") (Commit: $sha)"
+          
+          hub release create \
+            -t "$GITHUB_SHA" \
+            "$tag" \
+            -m "$message" \
+            -a build/u-boot.bin \
+            -a build/u-boot-comp.bin \
+            -a build/ddr_init.bin \
             -a build/resource.img \
             -a build/eMMC.burn.img
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
