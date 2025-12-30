@@ -18,8 +18,8 @@ jobs:
 
       - name: Download toolchain
         run: |
-          curl -L -O https://dl.tuling.pp.ua/uploads/gcc-linaro-arm-linux-gnueabihf-4.8-2014.04_linux.tar.xz
-          tar xvf ./gcc-linaro-arm-none-eabi-4.8-2014.04_linux.tar.xz
+          curl -L -O https://dl.tuling.pp.ua/uploads/gcc-linaro-arm-none-eabi-4.8-2014.04_linux.tgz
+          tar xzf ./gcc-linaro-arm-none-eabi-4.8-2014.04_linux.tgz
 
       - name: Build
         run: |
