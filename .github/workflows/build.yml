@@ -8,12 +8,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4  # 升级到最新版本
+        uses: actions/checkout@v4  # 升级到v4
 
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install make imagemagick ttf-dejavu
+          # 修正字体包名称，并添加-y标志以非交互方式安装
+          sudo apt install -y make imagemagick fonts-dejavu
 
       - name: Download toolchain
         run: |
@@ -105,28 +106,24 @@ jobs:
           ./AmlImg pack build/eMMC.burn.img pack/
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4  # 升级到v4版本
+        uses: actions/upload-artifact@v4  # 升级到v4
         with:
-          name: u-boot-build-artifacts
-          path: |
+          name: u-boot-build-artifacts  # 为Artifact指定一个名称
+          path: |  # 上传的文件路径
             build/*.bin
             build/resource.img
             build/eMMC.burn.img
-          overwrite: true  # 如果存在同名artifacts则覆盖
+          # 如果希望覆盖同名Artifact，可添加 overwrite: true
 
-      - name: Install hub for release
-        run: |
-          # 安装hub命令行工具（GitHub的扩展工具）
-          sudo apt-get update
-          sudo apt-get install -y hub
+      - name: Install hub
+        run: sudo apt install -y hub  # 确保hub命令行工具已安装
 
-      - name: Create Release
+      - name: Release
         run: |
           time="${{ github.event.head_commit.timestamp }}"
           sha="${GITHUB_SHA:0:8}"
           tag="build-$(date +'%Y%m%d-%H%M' -d "$time")"
           message="Auto-Build $(date +'%Y-%m-%d %H:%M' -d "$time")"
-          
           hub release create -t "$GITHUB_SHA" "$tag" -m "$message" \
             $(for a in build/*.bin; do echo -a $a; done) \
             -a build/resource.img \
