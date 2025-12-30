@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4  # 升级到最新版本
 
       - name: Install dependencies
         run: |
@@ -105,20 +105,29 @@ jobs:
           ./AmlImg pack build/eMMC.burn.img pack/
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4  # 升级到v4版本
         with:
+          name: u-boot-build-artifacts
           path: |
             build/*.bin
             build/resource.img
             build/eMMC.burn.img
+          overwrite: true  # 如果存在同名artifacts则覆盖
 
-      - name: Release
+      - name: Install hub for release
+        run: |
+          # 安装hub命令行工具（GitHub的扩展工具）
+          sudo apt-get update
+          sudo apt-get install -y hub
+
+      - name: Create Release
         run: |
           time="${{ github.event.head_commit.timestamp }}"
           sha="${GITHUB_SHA:0:8}"
           tag="build-$(date +'%Y%m%d-%H%M' -d "$time")"
           message="Auto-Build $(date +'%Y-%m-%d %H:%M' -d "$time")"
-          hub release create  -t "$GITHUB_SHA" "$tag" -m "$message" \
+          
+          hub release create -t "$GITHUB_SHA" "$tag" -m "$message" \
             $(for a in build/*.bin; do echo -a $a; done) \
             -a build/resource.img \
             -a build/eMMC.burn.img
